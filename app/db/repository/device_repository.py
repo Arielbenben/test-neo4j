@@ -8,9 +8,9 @@ def insert_two_devices_to_db(device1: Device, device2: Device):
     try:
         with driver.session() as session:
             query = """
-            CREATE (d1:Device $device1_props)
-            CREATE (d2:Device $device2_props)
-            RETURN d1, d2
+            create (d1:Device $device1_props)
+            create (d2:Device $device2_props)
+            return d1, d2
             """
 
             device1_props = add_device_to_dict(device1)
@@ -34,10 +34,10 @@ def insert_two_devices_to_db(device1: Device, device2: Device):
 def add_interaction_relation(interaction: Interaction):
     with driver.session() as session:
         query = """
-        MATCH (d1:Device {device_id: $device1_id}), (d2:Device {device_id: $device2_id})
-        MERGE (d1)-[rel:INTERACTION]->(d2)
-        SET rel += $interaction_props
-        RETURN d1, d2, rel
+        match (d1:Device {device_id: $device1_id}), (d2:Device {device_id: $device2_id})
+        merge (d1)-[rel:INTERACTION]->(d2)
+        set rel += $interaction_props
+        return d1, d2, rel
         """
 
         params = {
@@ -61,8 +61,8 @@ def get_device_by_id_and_time_relation(device: dict, interaction: dict):
     try:
         with driver.session() as session:
             query = """
-            MATCH (d:Device {device_id: $device_id})-[:INTERACTION {timestamp: $timestamp}]->(d2:Device)
-            RETURN d
+            match (d:Device {device_id: $device_id})-[:INTERACTION {timestamp: $timestamp}]->(d2:Device)
+            return d
             """
 
             params = {
@@ -83,8 +83,8 @@ def get_device_with_relation_to_device(first_device, second_device):
     try:
         with driver.session() as session:
             query = """
-            MATCH (d1:Device {device_id: $device1_id})-[:INTERACTION]->(d2:Device {device_id: $device2_id})
-            RETURN d1, d2
+            match (d1:Device {device_id: $device1_id})-[:INTERACTION]->(d2:Device {device_id: $device2_id})
+            return d1, d2
             """
 
             params = {
@@ -114,10 +114,10 @@ def get_recent_interaction_of_device(device: dict):
     try:
         with driver.session() as session:
             query = """
-            MATCH (d:Device {device_id: $device_id})-[rel:INTERACTION]->(d2:Device)
-            RETURN d
-            ORDER BY rel.timestamp
-            DESC LIMIT 1
+            match (d:Device {device_id: $device_id})-[rel:INTERACTION]->(d2:Device)
+            return d
+            order by rel.timestamp
+            desc limit 1
             """
             params = {"device_id": device['id']}
             result = session.run(query, params)
@@ -133,8 +133,8 @@ def count_connected_devices(json):
     try:
         with driver.session() as session:
             query = """
-            MATCH (d:Device)-[:INTERACTION]->(d2:Device{device_id: $device_id})
-            RETURN COUNT(d) AS connected_devices
+            match (d:Device)-[:INTERACTION]->(d2:Device{device_id: $device_id})
+            return count(d) as connected_devices
             """
             params = {'device_id': json['device_id']}
             result = session.run(query, params).single()
@@ -150,9 +150,9 @@ def find_devices_with_strong_signal():
     try:
         with driver.session() as session:
             query = """
-               MATCH (d1:Device)-[rel:INTERACTION]->(d2:Device)
-               WHERE rel.signal_strength_dbm > -60
-               RETURN d1, d2
+               match (d1:Device)-[rel:INTERACTION]->(d2:Device)
+               where rel.signal_strength_dbm > -60
+               return d1, d2
                """
             result = session.run(query).data()
 
@@ -174,22 +174,29 @@ def find_devices_connected_in_bluetooth_and_how_long_the_path():
     try:
         with driver.session() as session:
             query = """
-                MATCH path = (d1:Device)-[rel:INTERACTION]->(d2:Device)
-                WHERE rel.method = 'Bluetooth'
-                RETURN d1, d2, length(path) AS path_length
-                """
+                match (start:Device), (end:Device)
+                where start <> end
+                match path = shortestPath((start)-[:INTERACTION*]->(end))
+                where ALL(r IN relationships(path) where r.method = 'Bluetooth')
+                with path, length(path) as pathLength, start, end
+                order by pathLength DESC
+                limit 1
+                return start, end, pathLength
+            """
             result = session.run(query).data()
 
             if result:
                 devices = []
                 for record in result:
                     devices.append({
-                        "device1": dict(record['d1']),
-                        "device2": dict(record['d2']),
-                        'path_length': record['path_length']
+                        "device1": dict(record['start']),
+                        "device2": dict(record['end']),
+                        'path_length': record['pathLength']
                     })
                 return devices
             else:
                 return None
     except Exception as e:
         return str(e)
+
+
