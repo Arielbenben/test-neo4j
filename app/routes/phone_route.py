@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-
 from app.db.repository.device_repository import count_connected_devices, find_devices_with_strong_signal, \
     find_devices_connected_in_bluetooth_and_how_long_the_path
 from app.service.device_service import get_data_from_api, check_if_there_is_direct_connection, \
