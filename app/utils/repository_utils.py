@@ -1,13 +1,16 @@
-from typing import Dict
-import toolz as t
 from app.db.model.device import Device
 from app.db.model.interaction import Interaction
 from app.db.model.location import Location
 
 
-def add_device_to_dict_without(device_details: Device):
+def add_device_to_dict(device_details: Device):
     return {'brand': device_details.brand, 'model': device_details.model, 'name': device_details.name,
-            'device_id': device_details.id ,'os': device_details.os, **device_details.location}
+            'device_id': device_details.id ,'os': device_details.os, **add_location_to_dict(device_details.location)}
+
+
+def add_location_to_dict(location: Location):
+    return {'latitude': location.latitude, 'longitude': location.longitude, 'altitude_meters': location.altitude_meters,
+            'accuracy_meters': location.accuracy_meters}
 
 
 def add_interaction_to_dict(interaction: Interaction):
@@ -27,5 +30,3 @@ def add_interaction_to_model(interaction: dict):
     return Interaction(**interaction)
 
 
-def check_if_devices_valid(first_device, second_device):
-    return first_device['name'] == second_device['name']
