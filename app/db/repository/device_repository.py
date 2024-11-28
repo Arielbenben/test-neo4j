@@ -120,14 +120,12 @@ def get_recent_interaction_of_device(device: dict):
             limit 1
             """
             params = {"device_id": device['id']}
-            result = session.run(query, params)
+            result = session.run(query, params).single()
 
-            record = result.single()
-
-            if record:
+            if result:
                 return {
-                    "device": dict(record["d"]),
-                    "interaction": dict(record["rel"])
+                    "device": dict(result["d"]),
+                    "interaction": dict(result["rel"])
                 }
             return None
     except Exception as e:
