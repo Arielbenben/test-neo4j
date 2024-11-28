@@ -48,40 +48,6 @@ def insert_two_devices_to_db(device1: Device, device2: Device):
         return []
 
 
-def update_device_in_db(device: Device):
-    with driver.session() as session:
-        device_props = asdict(device)
-        device_id = device_props.pop('id')
-
-        props = ', '.join(f"d.{key} = ${key}" for key in device_props.keys())
-
-        query = f"""
-        MATCH (d:Device {{id: $device_id}})
-        SET {props}
-        RETURN d
-        """
-
-        params = {'device_id': device_id, **device_props}
-
-        result = session.run(query, params).single()
-
-        return dict(result['d']) if result else None
-
-
-def delete_device_from_db(device: Device):
-    with driver.session() as session:
-        query = """
-        MATCH (d:Device {id: $device_id})
-        DELETE d
-        RETURN COUNT(d) = 0 AS deleted
-        """
-
-        params = {'device_id': device.id}
-        result = session.run(query, params).single()
-
-        return result['deleted'] if result else False
-
-
 def add_interaction_relation(interaction: Interaction):
     with driver.session() as session:
         query = """
@@ -106,27 +72,6 @@ def add_interaction_relation(interaction: Interaction):
                 'relation': dict(result['rel'])
             }
         return None
-
-
-def update_interaction_relation(device1: Device, device2: Device, interaction: Interaction):
-    with driver.session() as session:
-        query = """
-        MATCH (d1:Device {id: $device1_id})-[rel:INTERACTION]->(d2:Device {id: $device2_id})
-        SET rel += $updated_props
-        RETURN d1, d2, rel
-        """
-        params = {
-            'device1_id': device1.id,
-            'device2_id': device2.id,
-            'updated_props': add_interaction_to_dict(interaction)
-        }
-
-        result = session.run(query, params).single()
-        return {
-            'device1': dict(result['d1']),
-            'device2': dict(result['d2']),
-            'relation': dict(result['rel'])
-        } if result else None
 
 
 def get_device_by_id_and_time_relation(device: dict, interaction: dict):
@@ -197,5 +142,46 @@ def get_recent_interaction_of_device(device: dict):
             record = result.single()
 
             return dict(record["d"]) if record else None
+    except Exception as e:
+        return str(e)
+
+
+def count_connected_devices(json):
+    try:
+        with driver.session() as session:
+            query = """
+            MATCH (d:Device)-[:INTERACTION]->(d2:Device{device_id: $device_id})
+            RETURN COUNT(d) AS connected_devices
+            """
+            params = {'device_id': json['device_id']}
+            result = session.run(query, params).single()
+
+            if result:
+                return result["connected_devices"]
+            return 0
+    except Exception as e:
+        return str(e)
+
+
+def find_devices_with_strong_signal():
+    try:
+        with driver.session() as session:
+            query = """
+               MATCH (d1:Device)-[rel:INTERACTION]->(d2:Device)
+               WHERE rel.signal_strength_dbm > -60
+               RETURN d1, d2
+               """
+            result = session.run(query).data()
+
+            if result:
+                devices = []
+                for record in result:
+                    devices.append({
+                        "device1": dict(record['d1']),
+                        "device2": dict(record['d2'])
+                    })
+                return devices
+            else:
+                return None
     except Exception as e:
         return str(e)

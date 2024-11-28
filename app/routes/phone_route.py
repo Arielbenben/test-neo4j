@@ -1,4 +1,6 @@
 from flask import Blueprint, request, jsonify
+
+from app.db.repository.device_repository import count_connected_devices, find_devices_with_strong_signal
 from app.service.device_service import get_data_from_api, check_if_there_is_direct_connection, \
    get_most_recent_interaction
 
@@ -43,3 +45,22 @@ def get_most_recent_interaction_route():
       return jsonify({'message': 'There is not interaction to this device'}), 200
    except Exception as e:
       return jsonify({'Error': str(e)}), 500
+
+
+@phone_blueprint.route('/count_connected_devices', methods=['GET'])
+def count_devices_route():
+    json = request.json
+    if not json:
+        return jsonify({"Error": "Expected to get json"}), 400
+
+    count = count_connected_devices(json)
+    return jsonify({"connected_devices_count": count}), 200
+
+
+@phone_blueprint.route('/find_strong_signal_devices', methods=['GET'])
+def find_strong_signal_devices():
+    devices = find_devices_with_strong_signal()
+    if devices:
+        return jsonify({"devices": devices})
+    else:
+        return jsonify({"message": "No devices found with signal strength stronger than -60"}), 404
