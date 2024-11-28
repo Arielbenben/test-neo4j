@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 
-from app.db.repository.device_repository import count_connected_devices, find_devices_with_strong_signal
+from app.db.repository.device_repository import count_connected_devices, find_devices_with_strong_signal, \
+    find_devices_connected_in_bluetooth_and_how_long_the_path
 from app.service.device_service import get_data_from_api, check_if_there_is_direct_connection, \
    get_most_recent_interaction
 
@@ -64,3 +65,12 @@ def find_strong_signal_devices():
         return jsonify({"devices": devices})
     else:
         return jsonify({"message": "No devices found with signal strength stronger than -60"}), 404
+
+
+@phone_blueprint.route('/find_bluetooth_devices', methods=['GET'])
+def find_bluetooth_devices():
+    devices = find_devices_connected_in_bluetooth_and_how_long_the_path()
+    if devices:
+        return jsonify(devices), 200
+    else:
+        return jsonify({"message": "No Bluetooth-connected devices found."}), 404

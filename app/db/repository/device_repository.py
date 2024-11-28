@@ -2,23 +2,6 @@ from app.db.model.device import Device
 from app.db.model.interaction import Interaction
 from app.db.neo4j_database import driver
 from app.utils.repository_utils import add_device_to_dict,add_interaction_to_dict
-import toolz as t
-from dataclasses import asdict
-
-
-
-def get_all_devices():
-    with driver.session() as session:
-        query = f"""
-        match (d:Device) 
-        return d
-        """
-        res = session.run(query).data()
-        return t.pipe(
-            res,
-            t.partial(t.pluck, 'd'),
-            list
-        )
 
 
 def insert_two_devices_to_db(device1: Device, device2: Device):
@@ -179,6 +162,31 @@ def find_devices_with_strong_signal():
                     devices.append({
                         "device1": dict(record['d1']),
                         "device2": dict(record['d2'])
+                    })
+                return devices
+            else:
+                return None
+    except Exception as e:
+        return str(e)
+
+
+def find_devices_connected_in_bluetooth_and_how_long_the_path():
+    try:
+        with driver.session() as session:
+            query = """
+                MATCH path = (d1:Device)-[rel:INTERACTION]->(d2:Device)
+                WHERE rel.method = 'Bluetooth'
+                RETURN d1, d2, length(path) AS path_length
+                """
+            result = session.run(query).data()
+
+            if result:
+                devices = []
+                for record in result:
+                    devices.append({
+                        "device1": dict(record['d1']),
+                        "device2": dict(record['d2']),
+                        'path_length': record['path_length']
                     })
                 return devices
             else:
