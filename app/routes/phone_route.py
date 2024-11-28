@@ -13,7 +13,7 @@ def get_interaction():
    try:
       json = request.json
       if not json:
-         return jsonify({'Error': 'Expected to get json'}), 500
+         return jsonify({'Error': 'Expected to get json'}), 400
       print(json)
       result = get_data_from_api(json)
       return jsonify({'message': result}), 200
@@ -26,7 +26,7 @@ def determine_if_direct_connection_between_two_devices_route():
    try:
       json = request.json
       if not json:
-         return jsonify({'Error': 'Expected to get json'}), 500
+         return jsonify({'Error': 'Expected to get json'}), 400
       result = check_if_there_is_direct_connection(json)
       return jsonify({'message': result}), 200
    except Exception as e:
@@ -38,16 +38,16 @@ def get_most_recent_interaction_route():
    try:
       json = request.json
       if not json:
-         return jsonify({'Error': 'Expected to get json'}), 500
+         return jsonify({'Error': 'Expected to get json'}), 400
       result = get_most_recent_interaction(json)
       if result:
          return jsonify(result), 200
-      return jsonify({'message': 'There is not interaction to this device'}), 200
+      return jsonify({'message': 'There is not interaction to this device'}), 404
    except Exception as e:
       return jsonify({'Error': str(e)}), 500
 
 
-@phone_blueprint.route('/count_connected_devices', methods=['GET'])
+@phone_blueprint.route('/count_connected_devices_by_device_id', methods=['GET'])
 def count_devices_route():
     json = request.json
     if not json:
@@ -61,9 +61,9 @@ def count_devices_route():
 def find_strong_signal_devices():
     devices = find_devices_with_strong_signal()
     if devices:
-        return jsonify({"devices": devices})
+        return jsonify({"devices": devices}), 200
     else:
-        return jsonify({"message": "No devices found with signal strength stronger than -60"}), 404
+        return jsonify({"message": "No devices found with signal strength stronger than -60"}), 200
 
 
 @phone_blueprint.route('/find_bluetooth_devices', methods=['GET'])
@@ -72,4 +72,4 @@ def find_bluetooth_devices():
     if devices:
         return jsonify(devices), 200
     else:
-        return jsonify({"message": "No Bluetooth-connected devices found."}), 404
+        return jsonify({"message": "No Bluetooth-connected devices found."}), 200

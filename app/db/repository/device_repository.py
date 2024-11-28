@@ -115,18 +115,24 @@ def get_recent_interaction_of_device(device: dict):
         with driver.session() as session:
             query = """
             match (d:Device {device_id: $device_id}) - [rel:INTERACTION] -> (d2:Device)
-            return d
-            order by rel.timestamp
-            desc limit 1
+            return d, rel
+            order by rel.timestamp desc
+            limit 1
             """
             params = {"device_id": device['id']}
             result = session.run(query, params)
 
             record = result.single()
 
-            return dict(record["d"]) if record else None
+            if record:
+                return {
+                    "device": dict(record["d"]),
+                    "interaction": dict(record["rel"])
+                }
+            return None
     except Exception as e:
         return str(e)
+
 
 
 def count_connected_devices(json):
